@@ -1,6 +1,7 @@
 name: example
 description: "A new Flutter project."
 publish_to: "none" # Remove this line if you wish to publish to pub.dev
+homepage: https://github.com/MCHTSEN/ai_profanity_textfield
 
 version: 1.0.0+1
 

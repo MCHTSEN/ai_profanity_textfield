@@ -1,7 +1,8 @@
 name: ai_profanity_textfield
-description: "A new Flutter package project."
+description: "A textfield widget that checks for profanity in the input text."
 version: 0.0.1
-homepage: null
+homepage: https://github.com/MCHTSEN/ai_profanity_textfield
+repository: https://github.com/MCHTSEN/ai_profanity_textfield
 
 environment:
   sdk: ">=3.3.4 <4.0.0"
