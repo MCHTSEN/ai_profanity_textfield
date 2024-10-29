@@ -3,7 +3,36 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
 
-class ProfanityTextField extends StatefulWidget {
+enum ValidationState {
+  initial,
+  valid,
+  invalid,
+  loading,
+}
+
+class ValidationResult {
+  final bool isValid;
+  final String? errorMessage;
+  final String? successMessage;
+
+  ValidationResult({
+    required this.isValid,
+    this.errorMessage,
+    this.successMessage,
+  });
+
+  static ValidationResult success([String? message]) => ValidationResult(
+        isValid: true,
+        successMessage: message,
+      );
+
+  static ValidationResult error(String message) => ValidationResult(
+        isValid: false,
+        errorMessage: message,
+      );
+}
+
+class ProfanityTextFormField extends StatefulWidget {
   final GeminiService geminiService;
   final bool checkWhileTyping;
   final Duration debounceDuration;
@@ -22,13 +51,19 @@ class ProfanityTextField extends StatefulWidget {
   final bool enabled;
   final TextInputType? keyboardType;
   final TextInputAction? textInputAction;
-  final Function(String)? onSubmitted;
+  final Function(String)? onFieldSubmitted;
   final InputDecoration? profanityDecoration;
   final bool clearOnProfanity;
   final Color? progressIndicatorColor;
   final double progressIndicatorSize;
+  final List<FormFieldValidator<String>>? validators;
+  final InputDecoration? successDecoration;
+  final int? minLength;
+  final Duration validationMessageDuration;
+  final Function(ValidationState state)? onValidationStateChanged;
+  final bool showValidIcon;
 
-  const ProfanityTextField({
+  const ProfanityTextFormField({
     super.key,
     required this.geminiService,
     this.checkWhileTyping = true,
@@ -48,23 +83,31 @@ class ProfanityTextField extends StatefulWidget {
     this.enabled = true,
     this.keyboardType,
     this.textInputAction,
-    this.onSubmitted,
+    this.onFieldSubmitted,
     this.profanityDecoration,
     this.clearOnProfanity = false,
     this.progressIndicatorColor,
     this.progressIndicatorSize = 20,
+    this.validators,
+    this.successDecoration,
+    this.minLength,
+    this.validationMessageDuration = const Duration(seconds: 3),
+    this.onValidationStateChanged,
+    this.showValidIcon = true,
   });
 
   @override
-  State<ProfanityTextField> createState() => _ProfanityTextFieldState();
+  State<ProfanityTextFormField> createState() => _ProfanityTextFormFieldState();
 }
 
-class _ProfanityTextFieldState extends State<ProfanityTextField> {
+class _ProfanityTextFormFieldState extends State<ProfanityTextFormField> {
   late TextEditingController _controller;
   Timer? _debounceTimer;
   bool _isChecking = false;
   bool _hasProfanity = false;
   String? _lastCheckedText;
+  ValidationState _validationState = ValidationState.initial;
+  String? _validationMessage;
 
   @override
   void initState() {
@@ -82,76 +125,94 @@ class _ProfanityTextFieldState extends State<ProfanityTextField> {
     super.dispose();
   }
 
-  Future<void> _checkProfanity(String text) async {
-    // Return early if text is empty or same as last checked
+  void _onChanged(String text) {
     if (text.isEmpty) {
       setState(() {
         _hasProfanity = false;
         _isChecking = false;
+        _lastCheckedText = null;
+        _validationState = ValidationState.initial;
+        _validationMessage = null;
       });
       return;
     }
-
-    if (text == _lastCheckedText) return;
-
-    try {
-      setState(() {
-        _isChecking = true;
-        _lastCheckedText = text;
-      });
-
-      final hasProfanity = await widget.geminiService.checkProfanity(text);
-
-      // Only update state if the text hasn't changed while checking
-      if (mounted && text == _controller.text) {
-        setState(() {
-          _hasProfanity = hasProfanity;
-          _isChecking = false;
-        });
-
-        if (hasProfanity) {
-          widget.onProfanityDetected?.call(text);
-          if (widget.clearOnProfanity) {
-            _controller.clear();
-            setState(() {
-              _hasProfanity = false;
-            });
-          }
-        } else {
-          widget.onCleanText?.call(text);
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() => _isChecking = false);
-        widget.onError?.call(e.toString());
-      }
-    }
-  }
-
-  void _onChanged(String text) {
-    // Reset profanity state on any text change
-    setState(() {
-      _hasProfanity = false;
-      if (text.isEmpty) {
-        _isChecking = false;
-        _lastCheckedText = null;
-      }
-    });
 
     if (!widget.checkWhileTyping) return;
 
     _debounceTimer?.cancel();
     _debounceTimer = Timer(widget.debounceDuration, () {
-      _checkProfanity(text);
+      _validateText(text);
     });
   }
 
-  void _onSubmitted(String text) {
-    if (!widget.checkWhileTyping) {
-      _checkProfanity(text);
+  Future<void> _validateText(String text) async {
+    if (!mounted) return;
+
+    setState(() {
+      _isChecking = true;
+      _validationState = ValidationState.loading;
+      _validationMessage = null;
+    });
+
+    try {
+      // Önce diğer validasyonları kontrol et
+      if (widget.validators != null && widget.validators!.isNotEmpty) {
+        for (final validator in widget.validators!) {
+          final error = validator(text);
+          if (error != null) {
+            setState(() {
+              _isChecking = false;
+              _validationState = ValidationState.invalid;
+              _validationMessage = error;
+            });
+            return; // Validasyon hatası varsa Gemini kontrolüne geçme
+          }
+        }
+      }
+
+      // Validasyonlar başarılı ise Gemini profanity kontrolü yap
+      final hasProfanity = await widget.geminiService.checkProfanity(text);
+
+      if (!mounted || text != _controller.text) return;
+
+      if (hasProfanity) {
+        setState(() {
+          _hasProfanity = true;
+          _isChecking = false;
+          _validationState = ValidationState.invalid;
+          _validationMessage = 'Inappropriate content detected';
+        });
+
+        widget.onProfanityDetected?.call(text);
+
+        if (widget.clearOnProfanity) {
+          _controller.clear();
+          setState(() {
+            _hasProfanity = false;
+            _validationState = ValidationState.initial;
+            _validationMessage = null;
+          });
+        }
+        return;
+      }
+
+      // Tüm kontroller başarılı
+      setState(() {
+        _hasProfanity = false;
+        _isChecking = false;
+        _validationState = ValidationState.valid;
+        _validationMessage = null;
+      });
+      widget.onCleanText?.call(text);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isChecking = false;
+        _validationState = ValidationState.invalid;
+        _validationMessage = e.toString();
+      });
+      widget.onError?.call(e.toString());
     }
-    widget.onSubmitted?.call(text);
   }
 
   Widget _buildLoadingIndicator() {
@@ -179,17 +240,10 @@ class _ProfanityTextFieldState extends State<ProfanityTextField> {
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
+    return TextFormField(
       controller: _controller,
       focusNode: widget.focusNode,
-      decoration: _hasProfanity
-          ? (widget.profanityDecoration ??
-              const InputDecoration(
-                  errorText: 'Inappropriate content detected',
-                  errorStyle: TextStyle(color: Colors.red)))
-          : widget.decoration?.copyWith(
-              suffixIcon: _isChecking ? _buildLoadingIndicator() : null,
-            ),
+      decoration: _getDecoration(),
       style: widget.style,
       maxLines: widget.maxLines,
       minLines: widget.minLines,
@@ -199,8 +253,35 @@ class _ProfanityTextFieldState extends State<ProfanityTextField> {
       keyboardType: widget.keyboardType,
       textInputAction: widget.textInputAction,
       onChanged: _onChanged,
-      onSubmitted: _onSubmitted,
+      onFieldSubmitted: (text) {
+        if (!widget.checkWhileTyping) {
+          _validateText(text);
+        }
+        widget.onFieldSubmitted?.call(text);
+      },
     );
+  }
+
+  InputDecoration _getDecoration() {
+    if (_validationState == ValidationState.loading) {
+      return (widget.decoration ?? const InputDecoration()).copyWith(
+        suffixIcon: _buildLoadingIndicator(),
+      );
+    } else if (_validationState == ValidationState.invalid) {
+      return (widget.profanityDecoration ?? const InputDecoration()).copyWith(
+        errorText: _validationMessage,
+        errorStyle: const TextStyle(color: Colors.red),
+      );
+    } else if (_validationState == ValidationState.valid) {
+      return (widget.successDecoration ?? const InputDecoration()).copyWith(
+        helperText: _validationMessage,
+        helperStyle: const TextStyle(color: Colors.green),
+        suffixIcon: widget.showValidIcon
+            ? const Icon(Icons.check_circle, color: Colors.green)
+            : null,
+      );
+    }
+    return widget.decoration ?? const InputDecoration();
   }
 }
 
