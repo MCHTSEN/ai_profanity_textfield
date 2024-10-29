@@ -82,7 +82,7 @@ ProfanityTextFormField(
 )
 ```
 
-[Insert GIF showing basic usage example]
+
 
 ## Advanced Features 🔧
 
@@ -119,7 +119,7 @@ ProfanityTextFormField(
 )
 ```
 
-[Insert GIF showing different styling options]
+
 
 ### Validation States 🚦
 
