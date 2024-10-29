@@ -1,36 +1,8 @@
 import 'package:ai_profanity_textfield/profanity.dart';
+import 'package:ai_profanity_textfield/src/validation_state.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'dart:async';
-
-enum ValidationState {
-  initial,
-  valid,
-  invalid,
-  loading,
-}
-
-class ValidationResult {
-  final bool isValid;
-  final String? errorMessage;
-  final String? successMessage;
-
-  ValidationResult({
-    required this.isValid,
-    this.errorMessage,
-    this.successMessage,
-  });
-
-  static ValidationResult success([String? message]) => ValidationResult(
-        isValid: true,
-        successMessage: message,
-      );
-
-  static ValidationResult error(String message) => ValidationResult(
-        isValid: false,
-        errorMessage: message,
-      );
-}
 
 class ProfanityTextFormField extends StatefulWidget {
   final GeminiService geminiService;
@@ -62,6 +34,7 @@ class ProfanityTextFormField extends StatefulWidget {
   final Duration validationMessageDuration;
   final Function(ValidationState state)? onValidationStateChanged;
   final bool showValidIcon;
+  final String profanityMessage;
 
   const ProfanityTextFormField({
     super.key,
@@ -94,6 +67,7 @@ class ProfanityTextFormField extends StatefulWidget {
     this.validationMessageDuration = const Duration(seconds: 3),
     this.onValidationStateChanged,
     this.showValidIcon = true,
+    this.profanityMessage = 'Oops! Try a friendlier username.',
   });
 
   @override
@@ -131,8 +105,8 @@ class _ProfanityTextFormFieldState extends State<ProfanityTextFormField> {
         _hasProfanity = false;
         _isChecking = false;
         _lastCheckedText = null;
-        _validationState = ValidationState.initial;
-        _validationMessage = null;
+        _validationState = ValidationState.invalid;
+        _validationMessage = 'This field is required';
       });
       return;
     }
@@ -148,6 +122,17 @@ class _ProfanityTextFormFieldState extends State<ProfanityTextFormField> {
   Future<void> _validateText(String text) async {
     if (!mounted) return;
 
+    // Handle empty text case immediately
+    if (text.isEmpty) {
+      setState(() {
+        _hasProfanity = false;
+        _isChecking = false;
+        _validationState = ValidationState.invalid;
+        _validationMessage = 'This field is required';
+      });
+      return;
+    }
+
     setState(() {
       _isChecking = true;
       _validationState = ValidationState.loading;
@@ -155,7 +140,6 @@ class _ProfanityTextFormFieldState extends State<ProfanityTextFormField> {
     });
 
     try {
-      // Önce diğer validasyonları kontrol et
       if (widget.validators != null && widget.validators!.isNotEmpty) {
         for (final validator in widget.validators!) {
           final error = validator(text);
@@ -165,7 +149,7 @@ class _ProfanityTextFormFieldState extends State<ProfanityTextFormField> {
               _validationState = ValidationState.invalid;
               _validationMessage = error;
             });
-            return; // Validasyon hatası varsa Gemini kontrolüne geçme
+            return;
           }
         }
       }
@@ -180,7 +164,7 @@ class _ProfanityTextFormFieldState extends State<ProfanityTextFormField> {
           _hasProfanity = true;
           _isChecking = false;
           _validationState = ValidationState.invalid;
-          _validationMessage = 'Inappropriate content detected';
+          _validationMessage = widget.profanityMessage;
         });
 
         widget.onProfanityDetected?.call(text);
@@ -189,14 +173,13 @@ class _ProfanityTextFormFieldState extends State<ProfanityTextFormField> {
           _controller.clear();
           setState(() {
             _hasProfanity = false;
-            _validationState = ValidationState.initial;
-            _validationMessage = null;
+            _validationState = ValidationState.invalid;
+            _validationMessage = 'This field is required';
           });
         }
         return;
       }
 
-      // Tüm kontroller başarılı
       setState(() {
         _hasProfanity = false;
         _isChecking = false;
@@ -229,9 +212,10 @@ class _ProfanityTextFormFieldState extends State<ProfanityTextFormField> {
         child: Center(
           child: Padding(
             padding: const EdgeInsets.all(4.0),
-            child: AdaptiveProgressIndicator(
-              size: widget.progressIndicatorSize,
-            ),
+            child: SizedBox(
+                width: widget.progressIndicatorSize,
+                height: widget.progressIndicatorSize,
+                child: const CircularProgressIndicator.adaptive()),
           ),
         ),
       ),
@@ -253,6 +237,12 @@ class _ProfanityTextFormFieldState extends State<ProfanityTextFormField> {
       keyboardType: widget.keyboardType,
       textInputAction: widget.textInputAction,
       onChanged: _onChanged,
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'This field is required';
+        }
+        return null;
+      },
       onFieldSubmitted: (text) {
         if (!widget.checkWhileTyping) {
           _validateText(text);
@@ -263,56 +253,58 @@ class _ProfanityTextFormFieldState extends State<ProfanityTextFormField> {
   }
 
   InputDecoration _getDecoration() {
-    if (_validationState == ValidationState.loading) {
-      return (widget.decoration ?? const InputDecoration()).copyWith(
-        suffixIcon: _buildLoadingIndicator(),
-      );
-    } else if (_validationState == ValidationState.invalid) {
-      return (widget.profanityDecoration ?? const InputDecoration()).copyWith(
-        errorText: _validationMessage,
-        errorStyle: const TextStyle(color: Colors.red),
-      );
-    } else if (_validationState == ValidationState.valid) {
-      return (widget.successDecoration ?? const InputDecoration()).copyWith(
-        helperText: _validationMessage,
-        helperStyle: const TextStyle(color: Colors.green),
-        suffixIcon: widget.showValidIcon
+    Color borderColor;
+    Widget? suffixIcon;
+
+    switch (_validationState) {
+      case ValidationState.loading:
+        borderColor = Colors.grey;
+        suffixIcon = _buildLoadingIndicator();
+        break;
+      case ValidationState.invalid:
+        borderColor = Colors.red;
+        suffixIcon = widget.showValidIcon
+            ? Icon(Icons.error, color: Colors.red)
+            : null;
+        break;
+      case ValidationState.valid:
+        borderColor = Colors.green;
+        suffixIcon = widget.showValidIcon
             ? const Icon(Icons.check_circle, color: Colors.green)
-            : null,
-      );
-    }
-    return widget.decoration ?? const InputDecoration();
-  }
-}
-
-class AdaptiveProgressIndicator extends StatelessWidget {
-  final double size;
-  final Color? color;
-
-  const AdaptiveProgressIndicator({
-    super.key,
-    this.size = 20,
-    this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final platform = Theme.of(context).platform;
-
-    if (platform == TargetPlatform.iOS || platform == TargetPlatform.macOS) {
-      return CupertinoActivityIndicator(
-        radius: size / 2,
-      );
+            : null;
+        break;
+      case ValidationState.initial:
+      default:
+        borderColor = Colors.black;
+        suffixIcon = null;
+        break;
     }
 
-    return SizedBox(
-      width: size,
-      height: size,
-      child: CircularProgressIndicator(
-        strokeWidth: 2,
-        valueColor:
-            color != null ? AlwaysStoppedAnimation<Color>(color!) : null,
+    return (widget.decoration ?? const InputDecoration()).copyWith(
+      border: OutlineInputBorder(
+        borderSide: BorderSide(color: borderColor),
+        borderRadius: BorderRadius.circular(18),
       ),
+      focusedBorder: OutlineInputBorder(
+        borderSide: BorderSide(color: borderColor),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderSide: const BorderSide(color: Colors.red),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderSide: const BorderSide(color: Colors.red),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      suffixIcon: suffixIcon,
+      errorText: _validationState == ValidationState.invalid
+          ? _validationMessage
+          : null,
+      helperText:
+          _validationState == ValidationState.valid ? _validationMessage : null,
+      helperStyle: const TextStyle(color: Colors.green),
+      errorStyle: const TextStyle(color: Colors.red),
     );
   }
 }

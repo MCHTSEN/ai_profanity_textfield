@@ -1,6 +1,5 @@
-import 'package:ai_profanity_textfield/profanity.dart';
 import 'package:flutter/material.dart';
-import 'package:ai_profanity_textfield/src/profanity_widget.dart';
+import 'package:ai_profanity_textfield/profanity.dart';
 
 void main() {
   runApp(const MyApp());
@@ -11,106 +10,114 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      title: 'Profanity Example',
+    return MaterialApp(
+      title: 'AI Profanity TextField Demo',
       debugShowCheckedModeBanner: false,
-      home: ProfanityExample(),
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+        useMaterial3: true,
+      ),
+      home: const MyHomePage(),
     );
   }
 }
 
-class ProfanityExample extends StatefulWidget {
-  const ProfanityExample({super.key});
+class MyHomePage extends StatefulWidget {
+  const MyHomePage({super.key});
 
   @override
-  State<ProfanityExample> createState() => _ProfanityExampleState();
+  State<MyHomePage> createState() => _MyHomePageState();
 }
 
-class _ProfanityExampleState extends State<ProfanityExample> {
+class _MyHomePageState extends State<MyHomePage> {
   final _formKey = GlobalKey<FormState>();
-  late final GeminiService geminiService;
-
-  @override
-  void initState() {
-    geminiService =
-        GeminiService(apiKey: 'AIzaSyCmgv7RAHTpybOw1k2WyxG9PaFyQmgNU_M');
-
-    super.initState();
-  }
-
-  void _submitForm() {
-    if (_formKey.currentState?.validate() ?? false) {
-      // Form is valid
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Form Submitted Successfully')),
-      );
-    } else {
-      // Form is invalid
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please fix the errors in the form')),
-      );
-    }
-  }
+  // Initialize your GeminiService here
+  final geminiService =
+      GeminiService(apiKey: 'YOUR_API_KEY');
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        appBar: AppBar(
-          title: const Text('Profanity Example'),
-        ),
-        body: Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              children: [
-                ProfanityTextFormField(
-                  validators: [
-                    //add a validator here
-                    (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'This field is required';
-                      }
-                      return null;
-                    },
-                    (value) {
-                      if (value!.length < 6) {
-                        return 'Password must be at least 6 characters';
-                      }
-                      return null;
-                    },
-                    (value) {
-                      if (!value!.contains(RegExp(r'\d'))) {
-                        return 'Password must contain at least one number';
-                      }
-                      return null;
-                    },
-                  ],
-                  geminiService: geminiService,
-                  profanityDecoration: InputDecoration(
-                    errorText: 'Inappropriate content detected',
-                    errorStyle: const TextStyle(color: Colors.red),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: Colors.blue),
-                    ),
-                  ),
-                  decoration: InputDecoration(
-                    labelText: 'Name',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(color: Colors.blue),
-                    ),
-                  ),
+      appBar: AppBar(
+        title: const Text('AI Profanity TextField Example'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              // Basic usage
+              ProfanityTextFormField(
+                geminiService: geminiService,
+                decoration: const InputDecoration(
+                  labelText: 'Basic Example',
+                  hintText: 'Type something...',
                 ),
-                const SizedBox(height: 20),
-                ElevatedButton(
-                  onPressed: _submitForm,
-                  child: const Text('Submit'),
+              ),
+              const SizedBox(height: 20),
+              // Advanced usage with callbacks
+              ProfanityTextFormField(
+                geminiService: geminiService,
+                debounceDuration: const Duration(milliseconds: 500),
+                profanityMessage:
+                    'Oops! Try a friendlier username.', // Custom message in Turkish
+                decoration: const InputDecoration(
+                  labelText: 'Advanced Example',
+                  hintText: 'Type something...',
                 ),
-              ],
-            ),
+                onProfanityDetected: (text) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Profanity detected in: $text'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                },
+                onCleanText: (text) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Text is clean!'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                },
+                validators: [
+                  (value) {
+                    if (value != null && value.length < 3) {
+                      return 'Text must be at least 3 characters long';
+                    }
+                    return null;
+                  },
+                  (value) {
+                    if (value != null && !RegExp(r'\d').hasMatch(value)) {
+                      return 'Text must contain at least one number';
+                    }
+                    return null;
+                  }
+                ],
+                // clear text field when profanity is detected
+                clearOnProfanity: false,
+                // show an icon that indicates valid or invalid
+                showValidIcon: true,
+              ),
+
+              const SizedBox(height: 20),
+
+              ElevatedButton(
+                onPressed: () {
+                  if (_formKey.currentState!.validate()) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Form is valid!')),
+                    );
+                  }
+                },
+                child: const Text('Validate Form'),
+              ),
+            ],
           ),
-        ));
+        ),
+      ),
+    );
   }
 }
