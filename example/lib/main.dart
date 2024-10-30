@@ -1,6 +1,6 @@
 import 'package:example/decorated/decorated_example.dart';
 import 'package:flutter/material.dart';
-import 'package:ai_profanity_textfield/profanity.dart';
+import 'package:ai_profanity_textfield/ai_profanity_textfield.dart';
 
 void main() {
   runApp(const MyApp());

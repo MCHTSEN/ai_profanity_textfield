@@ -1,4 +1,4 @@
-import 'package:ai_profanity_textfield/profanity.dart';
+import 'package:ai_profanity_textfield/ai_profanity_textfield.dart';
 import 'package:example/decorated/textfield_wrapper.dart';
 import 'package:flutter/material.dart';
 
@@ -13,7 +13,7 @@ class _DecoratedExampleState extends State<DecoratedExample> {
   final _formKey = GlobalKey<FormState>();
   // Initialize your GeminiService here
   final geminiService =
-      GeminiService(apiKey: 'AIzaSyCEHocpiyvbc3Lc4mB1PYdNyKQtH9B6Scc');
+      GeminiService(apiKey: 'YOUR_API_KEY');
 
   @override
   Widget build(BuildContext context) {

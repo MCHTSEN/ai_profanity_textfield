@@ -5,7 +5,7 @@ class GeminiService {
 
   GeminiService({required String apiKey}) {
     final geminiApiKey = apiKey;
-    if (geminiApiKey == null || geminiApiKey.isEmpty) {
+    if (geminiApiKey.isEmpty) {
       throw Exception('Gemini API key is missing or empty');
     }
     _model = GenerativeModel(model: 'gemini-1.5-flash', apiKey: geminiApiKey);
@@ -26,7 +26,8 @@ class GeminiService {
       return isBadWord;
     } catch (e) {
       final exception = e.toString();
-      if(exception.contains('GenerativeAIException: Candidate was blocked due to safety')){
+      if (exception.contains(
+          'GenerativeAIException: Candidate was blocked due to safety')) {
         return true;
       }
       print('Failed to check profanity: $e');

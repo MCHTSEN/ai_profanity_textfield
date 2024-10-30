@@ -1,4 +1,6 @@
-import 'package:ai_profanity_textfield/profanity.dart';
+// ignore_for_file: unused_field
+
+import 'package:ai_profanity_textfield/ai_profanity_textfield.dart';
 import 'package:ai_profanity_textfield/src/validation_state.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
