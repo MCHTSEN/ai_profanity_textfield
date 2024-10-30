@@ -1,26 +1,19 @@
 name: ai_profanity_textfield
 description: "A textfield widget that checks for profanity in the input text."
-version: 0.0.1
+version: 1.0.0
 homepage: https://github.com/MCHTSEN/ai_profanity_textfield
 repository: https://github.com/MCHTSEN/ai_profanity_textfield
 
 environment:
-  sdk: ">=3.3.4 <4.0.0"
+  sdk: ">=3.2.0 <4.0.0"
   flutter: ">=1.17.0"
 
 dependencies:
   flutter:
     sdk: flutter
-  flutter_dotenv: ^5.1.0
-  flutter_riverpod: ^2.5.1
-  gap: ^3.0.1
   google_generative_ai: ^0.4.3
-  responsive_sizer: ^3.3.1
-  riverpod: ^2.5.1
 
 dev_dependencies:
   flutter_lints: ^3.0.0
   flutter_test:
     sdk: flutter
-
-flutter: null

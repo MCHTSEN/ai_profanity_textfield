@@ -225,6 +225,7 @@ class _ProfanityTextFormFieldState extends State<ProfanityTextFormField> {
   @override
   Widget build(BuildContext context) {
     return TextFormField(
+      cursorColor: const Color(0xffCEFE38),
       controller: _controller,
       focusNode: widget.focusNode,
       decoration: _getDecoration(),
@@ -264,7 +265,7 @@ class _ProfanityTextFormFieldState extends State<ProfanityTextFormField> {
       case ValidationState.invalid:
         borderColor = Colors.red;
         suffixIcon = widget.showValidIcon
-            ? Icon(Icons.error, color: Colors.red)
+            ? const Icon(Icons.error, color: Colors.red)
             : null;
         break;
       case ValidationState.valid:
@@ -275,18 +276,19 @@ class _ProfanityTextFormFieldState extends State<ProfanityTextFormField> {
         break;
       case ValidationState.initial:
       default:
-        borderColor = Colors.black;
+        borderColor = const Color(0xffCEFE38);
         suffixIcon = null;
         break;
     }
 
     return (widget.decoration ?? const InputDecoration()).copyWith(
+      filled: true,
       border: OutlineInputBorder(
         borderSide: BorderSide(color: borderColor),
         borderRadius: BorderRadius.circular(18),
       ),
       focusedBorder: OutlineInputBorder(
-        borderSide: BorderSide(color: borderColor),
+        borderSide: BorderSide(color: borderColor, width: 0.8),
         borderRadius: BorderRadius.circular(18),
       ),
       errorBorder: OutlineInputBorder(
