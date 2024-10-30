@@ -48,6 +48,12 @@ Add this to your `pubspec.yaml`:
 dependencies:
   ai_profanity_textfield: ^1.0.0
 ```
+### Get Your API Key
+
+1. Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. Sign in with your Google account
+3. Click "Create API Key"
+4. Copy your API key
 
 ### Quick Start 🏃
 
