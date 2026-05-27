@@ -1,6 +1,6 @@
 name: ai_profanity_textfield
 description: "A textfield widget that checks for profanity in the input text."
-version: 1.0.0
+version: 1.0.1
 homepage: https://github.com/MCHTSEN/ai_profanity_textfield
 repository: https://github.com/MCHTSEN/ai_profanity_textfield
 

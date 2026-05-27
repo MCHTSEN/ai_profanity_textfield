@@ -2,7 +2,7 @@
 
 * first version
 
-## [1.0.0] - 2024-10-30
+## [1.0.0]
 
 ### Added
 - Manual check button with refresh functionality
@@ -28,3 +28,6 @@
 - Step-by-step integration guide
 - Code examples for common use cases
 
+## [1.0.1]
+
+- Improved readme to better documentation
